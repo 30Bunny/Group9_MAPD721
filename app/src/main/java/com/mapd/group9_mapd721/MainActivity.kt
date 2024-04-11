@@ -41,8 +41,11 @@ import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.mapd.group9_mapd721.model.HotelDetailRoute
 import com.mapd.group9_mapd721.screen.BookingPage
 import com.mapd.group9_mapd721.screen.HomePage
+import com.mapd.group9_mapd721.screen.HotelDetailActivity
+import com.mapd.group9_mapd721.screen.HotelDetailView
 import com.mapd.group9_mapd721.screen.NotificationPage
 import com.mapd.group9_mapd721.screen.ProfilePage
 import com.mapd.group9_mapd721.ui.theme.BG
@@ -96,7 +99,7 @@ fun MyApp(modifier: Modifier = Modifier) {
         Scaffold(bottomBar = { TabView(tabBarItems, navController) }) {
             NavHost(navController = navController, startDestination = homeTab.title) {
                 composable(homeTab.title) {
-                    HomePage()
+                    HomePage(navController)
                 }
                 composable(alertsTab.title) {
                     NotificationPage()
@@ -106,6 +109,9 @@ fun MyApp(modifier: Modifier = Modifier) {
                 }
                 composable(moreTab.title) {
                     ProfilePage()
+                }
+                composable(HotelDetailRoute) {
+                    HotelDetailView()
                 }
             }
         }

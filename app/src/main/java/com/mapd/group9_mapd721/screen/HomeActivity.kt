@@ -1,12 +1,14 @@
 package com.mapd.group9_mapd721.screen
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.drawable.shapes.Shape
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -58,8 +61,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import coil.compose.rememberAsyncImagePainter
 import com.mapd.group9_mapd721.R
+import com.mapd.group9_mapd721.model.HotelDetailRoute
 import com.mapd.group9_mapd721.ui.theme.BG
 import com.mapd.group9_mapd721.ui.theme.Group9_MAPD721Theme
 import com.mapd.group9_mapd721.ui.theme.PrimaryColor
@@ -92,14 +99,21 @@ val itemList = listOf(
 )
 
 @Composable
-fun HomePage() {
+fun HomePage(navController: NavController) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     Column(modifier = Modifier
         .fillMaxSize()
         .background(color = PrimaryColor)
         .verticalScroll(scrollState)) {
         TopContainer()
-        HotelList()
+        HotelList{
+            //navigate to Hotel Detail page using NavController
+            //navController.navigate(HotelDetailRoute)
+
+            //navigate to Hotel Detail page using local context and startActivity
+            context.startActivity(Intent(context, HotelDetailActivity::class.java))
+        }
         PlaceList()
         Box(
             modifier = Modifier
@@ -190,10 +204,11 @@ fun CircularSearchBar(
 }
 
 @Composable
-fun HotelList(modifier: Modifier = Modifier) {
+fun HotelList(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .clickable(onClick = onClick)
             .background(color = Color.White)
             .padding(vertical = 8.dp),
     ) {
@@ -361,6 +376,6 @@ fun PlaceItem(item: PlaceListItem, isFirst: Boolean = false, isLast: Boolean = f
 @Composable
 fun HomePreview() {
     Group9_MAPD721Theme {
-        HomePage()
+        //HomePage()
     }
 }
