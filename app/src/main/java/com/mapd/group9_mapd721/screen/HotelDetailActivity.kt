@@ -2,6 +2,7 @@ package com.mapd.group9_mapd721.screen
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -100,6 +101,7 @@ class HotelDetailActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 fun HotelDetailView(modifier: Modifier = Modifier) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
     val activity = (LocalContext.current as? Activity)
     Scaffold(
         topBar = {
@@ -146,7 +148,9 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                     }
                     Spacer(modifier = Modifier.width(24.dp))
                     Button(
-                        onClick = {},
+                        onClick = {
+                            context.startActivity(Intent(context, BookingDetailActivity::class.java))
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 8.dp,

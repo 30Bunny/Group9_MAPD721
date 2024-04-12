@@ -26,6 +26,8 @@
         </activity>
 
         <activity android:name=".screen.HotelDetailActivity"/>
+        <activity android:name=".screen.BookingDetailActivity"/>
+        <activity android:name=".screen.RegisterActivity"/>
     </application>
 
 </manifest>
