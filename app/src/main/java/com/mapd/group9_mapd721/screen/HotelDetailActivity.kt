@@ -30,8 +30,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -110,7 +114,52 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                 }
 
             )
-        }
+        },
+        bottomBar = {
+            BottomAppBar(
+                containerColor = Color.White,
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp),
+                tonalElevation = 8.dp
+            ) {
+                Row{
+                    Column {
+                        Text(
+                            text = "Price",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TertiaryColor,
+                            maxLines = 1
+                        )
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = "$100",
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                fontSize = 20.sp
+                            )
+                            Text(
+                                text = "/ night",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(24.dp))
+                    Button(
+                        onClick = {},
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 8.dp,
+                            pressedElevation = 16.dp
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Book Now")
+                    }
+                }
+            }
+
+        },
     ) {
             innerPadding ->
         Column(modifier = Modifier
