@@ -1,6 +1,10 @@
 package com.mapd.group9_mapd721.screen
 
+import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -50,11 +55,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.composable
 import coil.compose.rememberAsyncImagePainter
-import com.example.bansidholakiya_mapd721_test.datastore.DataStoreManager
 import com.mapd.group9_mapd721.R
+import com.mapd.group9_mapd721.model.HotelDetailRoute
+import com.mapd.group9_mapd721.model.HotelListing
+import com.mapd.group9_mapd721.ui.theme.BG
 import com.mapd.group9_mapd721.ui.theme.Group9_MAPD721Theme
 import com.mapd.group9_mapd721.ui.theme.PrimaryColor
+import com.example.bansidholakiya_mapd721_test.datastore.DataStoreManager
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.text.DecimalFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 // Step 1: Data class representing the items in the list
 data class PlaceListItem(val imageUrl: String, val name: String)
@@ -83,29 +102,59 @@ val itemList = listOf(
     ),
 )
 
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HomePage(navController: NavController) {
     val context = LocalContext.current
     val dataStore = DataStoreManager(context)
     val scrollState = rememberScrollState()
 
-    val cName = remember { mutableStateOf("") }
 
-    LaunchedEffect(key1 = true) {
+    val cName = remember { mutableStateOf("") }
+    var hotelList by remember { mutableStateOf<List<HotelListing>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) } // Loading state
+
+    // Fetch hotels when the screen is initially displayed
+    LaunchedEffect(Unit) {
         cName.value = dataStore.readCName()
+
+        fetchHotels(
+            onSuccess = { hotels ->
+                hotelList = hotels
+                isLoading = false // Set loading state to false when data is fetched
+                Log.d("HomePage", "Data fetched successfully")
+            },
+            onError = { error ->
+                // Handle error
+                isLoading = false // Set loading state to false in case of error
+                Log.e("HomePage", "Error fetching data: $error")
+            }
+        )
     }
+
+    Log.d("HomePage", "isLoading: $isLoading")
 
     Column(modifier = Modifier
         .fillMaxSize()
         .background(color = PrimaryColor)
         .verticalScroll(scrollState)) {
         TopContainer(cName.value)
-        HotelList{
-            //navigate to Hotel Detail page using NavController
-            //navController.navigate(HotelDetailRoute)
-
-            //navigate to Hotel Detail page using local context and startActivity
-            context.startActivity(Intent(context, HotelDetailActivity::class.java))
+        if (isLoading) {
+            // Show progress indicator if loading
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+                Log.d("HomePage", "Loading indicator shown")
+            }
+        } else {
+            // Show hotel list if not loading
+            HotelList(hotelList) { hotelId ->
+                navigateToHotelDetailScreen(context, hotelId)
+            }
+            Log.d("HomePage", "Hotel list shown")
         }
         PlaceList()
         Box(
@@ -130,7 +179,7 @@ fun TopContainer(cName: String) {
                 .align(Alignment.TopStart)
         ) {
             Text(
-                text = "Good Morning, $cName !",
+                text = "Good Morning, $cName!",
                 style = TextStyle(
                     color = Color.White,
                     fontSize = 24.sp,
@@ -197,11 +246,10 @@ fun CircularSearchBar(
 }
 
 @Composable
-fun HotelList(modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun HotelList(hotelList: List<HotelListing>,modifier: Modifier = Modifier, onItemClick: (String) -> Unit) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .clickable(onClick = onClick)
             .background(color = Color.White)
             .padding(vertical = 8.dp),
     ) {
@@ -218,8 +266,8 @@ fun HotelList(modifier: Modifier = Modifier, onClick: () -> Unit) {
             LazyRow(
                 //modifier = Modifier.padding(horizontal = 16.dp),
                 content = {
-                    items(10) { index ->
-                        HotelItem(index, isFirst = index == 0, isLast = index == (10 - 1))
+                    items(hotelList.size) { index ->
+                        HotelItem(hotelList[index], isFirst = index == 0, isLast = index == hotelList.size - 1, onItemClick)
                     }
                 }
             )
@@ -228,12 +276,12 @@ fun HotelList(modifier: Modifier = Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-fun HotelItem(index: Int, isFirst: Boolean = false, isLast: Boolean = false) {
+fun HotelItem(hotel: HotelListing, isFirst: Boolean, isLast: Boolean, onItemClick: (String) -> Unit) {
     val startPadding = if (isFirst) 16.dp else 8.dp
     val endPadding = if (isLast) 16.dp else 8.dp
     Card(
         modifier = Modifier
-            .padding(start = startPadding, end = endPadding),
+            .padding(start = startPadding, end = endPadding).clickable { onItemClick(hotel.id) },
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
         ),
@@ -247,7 +295,7 @@ fun HotelItem(index: Int, isFirst: Boolean = false, isLast: Boolean = false) {
                 .width(240.dp)
         ) {
             Image(
-                painter = painterResource(id = R.drawable.hotel_1_1), // Replace with your image resource
+                painter = rememberAsyncImagePainter(hotel.hotelImage), // Replace with your image resource
                 contentDescription = null,
                 modifier = Modifier
                     .height(180.dp)
@@ -259,7 +307,7 @@ fun HotelItem(index: Int, isFirst: Boolean = false, isLast: Boolean = false) {
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
             ) {
                 Text(
-                    text = "Majestic Palza Hotel",
+                    text = hotel.hotelName,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     fontWeight = FontWeight.Medium,
@@ -267,7 +315,7 @@ fun HotelItem(index: Int, isFirst: Boolean = false, isLast: Boolean = false) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "London",
+                    text = hotel.city,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     maxLines = 1
@@ -275,7 +323,7 @@ fun HotelItem(index: Int, isFirst: Boolean = false, isLast: Boolean = false) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "$100",
+                        text = hotel.price.toString(),
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         fontSize = 18.sp
@@ -294,6 +342,8 @@ fun HotelItem(index: Int, isFirst: Boolean = false, isLast: Boolean = false) {
 
 @Composable
 fun PlaceList(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -364,6 +414,63 @@ fun PlaceItem(item: PlaceListItem, isFirst: Boolean = false, isLast: Boolean = f
     }
 }
 
+fun navigateToHotelDetailScreen(context: Context, hotelId: String) {
+    val intent = Intent(context, HotelDetailActivity::class.java).apply {
+        putExtra("hotelId", hotelId)
+    }
+    context.startActivity(intent)
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun fetchHotels(onSuccess: (List<HotelListing>) -> Unit, onError: (String) -> Unit) {
+    GlobalScope.launch(Dispatchers.IO) {
+        val client = OkHttpClient()
+
+        // Calculate current date and next date
+        val currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val nextDate = LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val request = Request.Builder()
+            .url("https://booking-com.p.rapidapi.com/v1/hotels/search?checkout_date=$nextDate&order_by=popularity&filter_by_currency=CAD&room_number=1&dest_id=38&dest_type=country&adults_number=2&checkin_date=$currentDate&locale=en-us&units=metric")
+            .get()
+            .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+            .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
+            .build()
+
+        val response = client.newCall(request).execute()
+        if (response.isSuccessful) {
+            val responseData = response.body?.string()
+            val hotels = parseHotels(responseData)
+            onSuccess(hotels)
+        } else {
+            onError("Failed to fetch data")
+        }
+    }
+}
+
+fun parseHotels(responseData: String?): List<HotelListing> {
+    val hotels = mutableListOf<HotelListing>()
+    responseData?.let {
+        val jsonObject = JSONObject(it)
+        val hotelsArray = jsonObject.getJSONArray("result")
+        for (i in 0 until hotelsArray.length()) {
+            val hotelObject = hotelsArray.getJSONObject(i)
+            val hotelName = hotelObject.optString("hotel_name", "")
+            val hotelImage = hotelObject.optString("max_photo_url", "")
+            val hotelId = hotelObject.optString("hotel_id", "")
+            val decimalFormat = DecimalFormat("#.##")
+            val price = decimalFormat.format(hotelObject.optDouble("min_total_price", 0.0)).toDouble()
+            val city = hotelObject.optString("city", "")
+
+            val hotelListing = HotelListing(hotelId, hotelName, hotelImage , price, city)
+            //Log.d("List", hotelListing.toString())
+            hotels.add(hotelListing)
+        }
+    }
+    Log.d("List", hotels.toString())
+    return hotels
+}
 
 @Preview(showBackground = true)
 @Composable
