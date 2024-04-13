@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
@@ -44,11 +43,9 @@ import androidx.navigation.compose.rememberNavController
 import com.mapd.group9_mapd721.model.HotelDetailRoute
 import com.mapd.group9_mapd721.screen.BookingPage
 import com.mapd.group9_mapd721.screen.HomePage
-import com.mapd.group9_mapd721.screen.HotelDetailActivity
 import com.mapd.group9_mapd721.screen.HotelDetailView
 import com.mapd.group9_mapd721.screen.NotificationPage
 import com.mapd.group9_mapd721.screen.ProfilePage
-import com.mapd.group9_mapd721.ui.theme.BG
 import com.mapd.group9_mapd721.ui.theme.Group9_MAPD721Theme
 import com.mapd.group9_mapd721.ui.theme.TertiaryColor
 
