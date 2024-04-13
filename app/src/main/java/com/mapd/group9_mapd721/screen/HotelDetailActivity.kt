@@ -3,9 +3,12 @@ package com.mapd.group9_mapd721.screen
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +42,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +53,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -65,14 +74,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.mapd.group9_mapd721.R
+import com.mapd.group9_mapd721.model.HotelDetails
+import com.mapd.group9_mapd721.model.HotelListing
 import com.mapd.group9_mapd721.ui.theme.Group9_MAPD721Theme
 import com.mapd.group9_mapd721.ui.theme.PrimaryColor
 import com.mapd.group9_mapd721.ui.theme.TertiaryColor
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
+import org.json.JSONObject
+import java.text.DecimalFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 val imageList = listOf(
     "https://media.cntraveler.com/photos/5b2c0684a98055277ea83e26/1:1/w_2667,h_2667,c_limit/CN-Tower_GettyImages-615764386.jpg",
@@ -80,9 +103,16 @@ val imageList = listOf(
     "https://i.natgeofe.com/n/77f528cb-054d-4bdb-8a4e-15a1c16d5195/winnipeg-skyline-canada_2x1.jpg",
 )
 
+private lateinit var hotelId: String
+
 class HotelDetailActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        hotelId = intent.getStringExtra("hotelId").toString()
+        Log.d("hotelId", hotelId)
+
         setContent {
             Group9_MAPD721Theme {
                 // A surface container using the 'background' color from the theme
@@ -97,12 +127,45 @@ class HotelDetailActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun HotelDetailView(modifier: Modifier = Modifier) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val activity = (LocalContext.current as? Activity)
+
+    var hotel by remember {
+        mutableStateOf<HotelDetails>(
+            HotelDetails(
+                "",
+                "",
+                "",
+                "",
+                "",
+                0.0f,
+                0.0,
+                listOf(),
+                "",
+                listOf()
+            )
+        )
+    }
+    LaunchedEffect(Unit) {
+        GlobalScope.launch(Dispatchers.IO) {
+            fetchHotelDetails(
+                hotelId = hotelId,
+                onSuccess = { item ->
+                    hotel = item
+                    Log.d("HOTLE", hotel.toString())
+                },
+                onError = { error ->
+                    Log.e("HomePage", "Error fetching data: $error")
+                }
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -123,7 +186,7 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp),
                 tonalElevation = 8.dp
             ) {
-                Row{
+                Row {
                     Column {
                         Text(
                             text = "Price",
@@ -133,7 +196,7 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                         )
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
-                                text = "$100",
+                                text = "$" + hotel.pricePerNight.toString(),
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 fontSize = 20.sp
@@ -149,7 +212,12 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.width(24.dp))
                     Button(
                         onClick = {
-                            context.startActivity(Intent(context, BookingDetailActivity::class.java))
+                            context.startActivity(
+                                Intent(
+                                    context,
+                                    BookingDetailActivity::class.java
+                                )
+                            )
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
                         elevation = ButtonDefaults.buttonElevation(
@@ -164,23 +232,24 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
             }
 
         },
-    ) {
-            innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-            .verticalScroll(scrollState)) {
-            ImageView()
-            HotelNameHeader(modifier = modifier)
-            HotelFacilityView(modifier = modifier)
-            HotelDescriptionView(modifier = modifier)
-            HotelImageList(modifier)
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+        ) {
+            ImageView(hotel)
+            HotelNameHeader(hotel, modifier = modifier)
+            HotelFacilityView(hotel, modifier = modifier)
+            HotelDescriptionView(hotel, modifier = modifier)
+            HotelImageList(hotel, modifier)
         }
     }
 }
 
 @Composable
-fun ImageView() {
+fun ImageView(hotel: HotelDetails) {
     Card(
         modifier = Modifier
             .padding(8.dp),
@@ -192,17 +261,34 @@ fun ImageView() {
         ),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.hotel_1_1), // Replace with your image resource
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-        )
+        val imageUrl = hotel.imageUrls.getOrNull(0)
+        if (imageUrl != null) {
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth()
+//                        .height(400.dp)
+                    .aspectRatio(1f/ 1f)
+            )
+        } else {
+            // You can show a placeholder or loading indicator here
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f/ 1f) // You can adjust the aspect ratio as needed
+                    .background(Color.LightGray), // Placeholder color
+            ) {
+                // You can customize the loading indicator here, for example, a progress bar
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+        }
     }
 }
 
 @Composable
-fun HotelNameHeader(modifier: Modifier) {
+fun HotelNameHeader(hotel: HotelDetails, modifier: Modifier) {
     Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -210,17 +296,17 @@ fun HotelNameHeader(modifier: Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Majestic Palza Hotel",
+                text = hotel.hotelName,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 fontWeight = FontWeight.Medium,
                 fontSize = 22.sp
             )
-            RatingView(rating = 4.9f, starIcon = Icons.Default.Star)
+            RatingView(rating = hotel.rating, starIcon = Icons.Default.Star)
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "London, UK",
+            text = hotel.city,
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             fontSize = 18.sp,
@@ -247,8 +333,7 @@ fun RatingView(rating: Float, starIcon: ImageVector) {
 }
 
 @Composable
-fun HotelDescriptionView(modifier: Modifier) {
-    val texts = listOf("Free Wi-Fi", "Air conditioning", "Breakfast included", "Restaurant", "City View", "Swimming pool")
+fun HotelDescriptionView(hotel: HotelDetails, modifier: Modifier) {
     Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(
             text = "Description",
@@ -260,7 +345,7 @@ fun HotelDescriptionView(modifier: Modifier) {
         )
         Spacer(modifier = modifier.height(8.dp))
         Text(
-            text = "Upscale hotel with restaurant, near Bell Centre. A hotel is an establishment that provides lodging, meals, and various guest services for travelers and tourists.",
+            text = hotel.description,
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             fontSize = 16.sp,
@@ -270,8 +355,8 @@ fun HotelDescriptionView(modifier: Modifier) {
 }
 
 @Composable
-fun HotelFacilityView(modifier: Modifier) {
-    val texts = listOf("Free Wi-Fi", "Air conditioning", "Breakfast included", "Restaurant", "Laundry", "Swimming pool")
+fun HotelFacilityView(hotel: HotelDetails, modifier: Modifier) {
+    val texts = hotel.facilities
     Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(
             text = "Facilities",
@@ -303,7 +388,7 @@ fun RoundedOutlineContainer(
             .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = text, color = TertiaryColor, fontWeight = FontWeight.Normal, fontSize = 14.sp)
+        Text(text = text, style = TextStyle(textAlign = TextAlign.Center), color = TertiaryColor, fontWeight = FontWeight.Normal, fontSize = 14.sp)
     }
 }
 
@@ -325,8 +410,8 @@ fun GridOfRoundedOutlineContainers(
 }
 
 @Composable
-fun HotelImageList(modifier: Modifier = Modifier) {
-    Column{
+fun HotelImageList(hotel: HotelDetails, modifier: Modifier = Modifier) {
+    Column {
         Text(
             text = "Gallery",
             style = TextStyle(
@@ -337,15 +422,19 @@ fun HotelImageList(modifier: Modifier = Modifier) {
             modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
-//        LazyRow(
-//            //modifier = Modifier.padding(horizontal = 16.dp),
-//            content = {
-//                items(imageList.size) { index ->
-//                    HotelImageItem(imageList[index], isFirst = index == 0, isLast = index == (10 - 1))
-//                }
-//            }
-//        )
-        StaggeredGridView()
+        LazyRow(
+            //modifier = Modifier.padding(horizontal = 16.dp),
+            content = {
+                items(hotel.imageUrls.size) { index ->
+                    HotelImageItem(
+                        hotel.imageUrls[index],
+                        isFirst = index == 0,
+                        isLast = index == (10 - 1)
+                    )
+                }
+            }
+        )
+        //StaggeredGridView(hotel)
     }
 }
 
@@ -377,19 +466,191 @@ fun HotelImageItem(item: String, isFirst: Boolean = false, isLast: Boolean = fal
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+fun fetchHotelDetails(
+    hotelId: String,
+    onSuccess: (HotelDetails) -> Unit,
+    onError: (String) -> Unit
+) {
+    val client = OkHttpClient()
+
+    val currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+    val nextDate = LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+    val detailsRequest = Request.Builder()
+        .url("https://booking-com.p.rapidapi.com/v2/hotels/details?currency=CAD&locale=en-us&checkout_date=$nextDate&hotel_id=$hotelId&checkin_date=$currentDate")
+        .get()
+        .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+        .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
+        .build()
+
+    val response = client.newCall(detailsRequest).execute()
+    if (response.isSuccessful) {
+        val responseData = response.body?.string()
+        val hotel = parseHotelDetails(responseData)
+
+        if (hotel.hotelName != "") {
+            // Fetch description and images separately
+            fetchDescriptionAndImages(hotelId, hotel, onSuccess, onError)
+        } else {
+            onError("Failed to parse hotel details")
+        }
+    } else {
+        onError("Failed to fetch data")
+    }
+}
+
+fun parseHotelDetails(responseData: String?): HotelDetails {
+    var hotel = HotelDetails("", "", "", "", "", 0.0f, 0.0, listOf(), "", listOf())
+    try {
+        val jsonObject = JSONObject(responseData)
+        val hotelId = jsonObject.optString("hotel_id")
+        val hotelName = jsonObject.optString("hotel_name")
+        val address = jsonObject.optString("address")
+        val countryCode = jsonObject.optString("countrycode")
+        val city = jsonObject.optString("city")
+        val rating = jsonObject.optJSONObject("wifi_review_score")!!.optString("rating").toFloat()
+        val decimalFormat = DecimalFormat("#.##")
+        val pricePerNight = decimalFormat.format(jsonObject.optJSONObject("composite_price_breakdown")
+            ?.optJSONObject("gross_amount_per_night")?.optDouble("value", 0.0)).toDouble()
+
+        val facilities = jsonObject.optJSONObject("facilities_block")?.optJSONArray("facilities")
+            ?.let { jsonArrayToStringList(it) }
+
+        hotel = hotel.copy(
+            hotelId = hotelId,
+            hotelName = hotelName,
+            address = address,
+            countryCode = countryCode,
+            city = city,
+            pricePerNight = pricePerNight ?: 0.0,
+            rating = rating/2,
+            facilities = facilities ?: emptyList()
+        )
+
+        // Do whatever you want with the parsed data
+        Log.d("hotel", "Hotel ID: $hotelId")
+        Log.d("hotel", "Hotel Name: $hotelName")
+        Log.d("hotel", "Address: $address")
+        Log.d("hotel", "Country Code: $countryCode")
+        Log.d("hotel", "City: $city")
+        Log.d("hotel", "Price Per Night: $pricePerNight")
+        Log.d("hotel", "Facilities: $facilities")
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return hotel
+}
+
+fun fetchDescriptionAndImages(
+    hotelId: String,
+    hotel: HotelDetails,
+    onSuccess: (HotelDetails) -> Unit,
+    onError: (String) -> Unit
+) {
+    val client = OkHttpClient()
+
+    val descriptionRequest = Request.Builder()
+        .url("https://booking-com.p.rapidapi.com/v1/hotels/description?hotel_id=$hotelId&locale=en-us")
+        .get()
+        .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+        .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
+        .build()
+
+    val imagesRequest = Request.Builder()
+        .url("https://booking-com.p.rapidapi.com/v1/hotels/photos?hotel_id=$hotelId&locale=en-us")
+        .get()
+        .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+        .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
+        .build()
+
+    val descriptionResponse = client.newCall(descriptionRequest).execute()
+    val imagesResponse = client.newCall(imagesRequest).execute()
+
+    if (descriptionResponse.isSuccessful && imagesResponse.isSuccessful) {
+        val descriptionData = descriptionResponse.body!!.string()
+        val imagesData = imagesResponse.body!!.string()
+
+        // Parse description and images data if required
+
+        // Update hotel object with description and images
+        val updatedHotel = hotel.copy(
+            description = parseDescription(descriptionData),
+            imageUrls = parseImages(imagesData)
+        )
+
+        onSuccess(updatedHotel)
+    } else {
+        onError("Failed to fetch description or images")
+    }
+}
+
+fun parseDescription(descriptionData: String): String {
+    var desc = ""
+    try {
+        val jsonObject = JSONObject(descriptionData)
+        desc = jsonObject.optString("description")
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return desc
+}
+
+fun parseImages(imagesData: String?): List<String> {
+    val imageUrls = mutableListOf<String>()
+
+    // Check if imagesData is null or blank
+    if (!imagesData.isNullOrBlank()) {
+        try {
+            // Parse the JSON array
+            val jsonArray = JSONArray(imagesData)
+
+            // Iterate through each object in the array
+            for (i in 0 until jsonArray.length()) {
+                // Break the loop if 10 URLs have been added
+                if (imageUrls.size >= 10) {
+                    break
+                }
+
+                // Get the current object
+                val jsonObject = jsonArray.getJSONObject(i)
+
+                // Extract the URL_1440 from the object
+                val url1440 = jsonObject.optString("url_1440")
+
+                // Add the URL to the list if it's not empty
+                if (url1440.isNotEmpty()) {
+                    imageUrls.add(url1440)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    return imageUrls
+}
+
+fun jsonArrayToStringList(jsonArray: JSONArray): List<String> {
+    val list = mutableListOf<String>()
+    for (i in 0 until jsonArray.length()) {
+        val itemObject = jsonArray.optJSONObject(i)
+        val name = itemObject?.optString("name")
+        if (!name.isNullOrBlank()) {
+            list.add(name)
+        }
+    }
+    return list
+}
+
 @Composable
-fun StaggeredGridView() {
+fun StaggeredGridView(hotel: HotelDetails) {
     // on below line we are creating
     // an array of images.
-    val images = listOf(
-        R.drawable.hotel_1_1,
-        R.drawable.hotel_1_2,
-        R.drawable.hotel_1_4,
-        R.drawable.hotel_1_3,
-        R.drawable.hotel_1_5,
-    )
+    val images = hotel.imageUrls
 
-    Column{
+    Column {
         // on below line we are calling our
         // custom staggered vertical grid item.
         CustomStaggeredVerticalGrid(
@@ -432,7 +693,10 @@ fun StaggeredGridView() {
                         Image(
                             // on below line we are specifying the
                             // drawable image for our image.
-                            painterResource(id = img),
+//                            painterResource(id = img),
+                            rememberAsyncImagePainter(img),
+
+
 
                             // on below line we are specifying
                             // content description for our image
@@ -545,6 +809,6 @@ private fun testColumn(columnHeights: IntArray): Int {
 @Composable
 fun HotelDetailPreview() {
     Group9_MAPD721Theme {
-        HotelDetailView()
+        //  HotelDetailView()
     }
 }
