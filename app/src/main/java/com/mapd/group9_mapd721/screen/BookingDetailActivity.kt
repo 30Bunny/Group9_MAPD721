@@ -195,8 +195,8 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
             //BookingDetailsNew(modifier = modifier, totalPrice = totalPrice)
             Column(modifier = Modifier.padding(16.dp)) {
                 CustomDatePicker(checkInDate, checkOutDate, onAccept = {
-//                    nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
-//                    totalPrice.value = calculateTotalPrice(rooms.toInt(), nights, basePrice.value)
+                    nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
+                    totalPrice.value = calculateTotalPrice(rooms.toInt(), nights, basePrice.value)
                 })
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -404,7 +404,7 @@ fun GuestList(guestList: MutableList<Guest>) {
 fun CustomDatePicker(
     checkInDate: MutableState<LocalDate>,
     checkOutDate: MutableState<LocalDate>,
-    onAccept: (Long?) -> Unit
+    onAccept: () -> Unit
 ) {
     val checkInDateDialogState = rememberMaterialDialogState()
     val checkOutDateDialogState = rememberMaterialDialogState()
@@ -429,7 +429,7 @@ fun CustomDatePicker(
             dialogState = checkInDateDialogState,
             buttons = {
                 positiveButton(text = "Ok") {
-                    onAccept(null) // Pass null because the date picker will handle setting the date
+                    onAccept() // Pass null because the date picker will handle setting the date
                 }
                 negativeButton(text = "Cancel")
             }
@@ -468,6 +468,7 @@ fun CustomDatePicker(
             dialogState = checkOutDateDialogState,
             buttons = {
                 positiveButton(text = "Ok") {
+                    onAccept()
                     // No need to set the checkout date here since it will be handled by the DatePicker
                 }
                 negativeButton(text = "Cancel")
