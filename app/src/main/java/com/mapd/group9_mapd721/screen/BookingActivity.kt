@@ -1,25 +1,20 @@
 package com.mapd.group9_mapd721.screen
 
+import android.util.Log
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,12 +22,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.mapd.group9_mapd721.ui.theme.Group9_MAPD721Theme
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CardDefaults
-import androidx.compose.ui.unit.dp
-
+import com.example.bansidholakiya_mapd721_test.datastore.DataStoreManager
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
+import kotlinx.coroutines.launch
+import java.text.DecimalFormat
 
 data class BookingDemoData(
     val bookingId: String,
@@ -47,58 +41,43 @@ data class BookingDemoData(
     val totalCost: Double
 )
 
-val hotelImage =
-    "https://cf.bstatic.com/xdata/images/hotel/max1280x900/157081615.jpg?k=e8b1951d8e07cd1dbf710065bfa7b2a1f3184ce31435ba6d59d1f6228eec9de9&o="
-
-val bookingsData = listOf(
-    BookingDemoData(
-        bookingId = "BD001",
-        imageUrl = hotelImage,
-        hotelId = "H001",
-        hotelName = "Luxury Hotel",
-        bookedBy = "John Doe",
-        checkInDate = "2024-05-01",
-        checkOutDate = "2024-05-05",
-        guests = 2,
-        rooms = 1,
-        totalCost = 500.00
-    ),
-    BookingDemoData(
-        bookingId = "BD002",
-        imageUrl = hotelImage,
-        hotelId = "H002",
-        hotelName = "Beach Resort",
-        bookedBy = "Jane Smith",
-        checkInDate = "2024-06-10",
-        checkOutDate = "2024-06-15",
-        guests = 4,
-        rooms = 4,
-        totalCost = 1200.00
-    ),
-    BookingDemoData(
-        bookingId = "BD003",
-        imageUrl = hotelImage,
-        hotelId = "H003",
-        hotelName = "Mountain Lodge",
-        bookedBy = "Alice Johnson",
-        checkInDate = "2024-07-20",
-        checkOutDate = "2024-07-25",
-        guests = 3,
-        rooms = 3,
-        totalCost = 800.00
-    )
-)
-
 @Composable
 fun BookingPage() {
+    val context = LocalContext.current
+    val dataStore = DataStoreManager(context)
+    val coroutineScope = rememberCoroutineScope()
+    val bookingsData = remember { mutableStateOf(listOf<BookingDemoData>()) }
+
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            val userID = dataStore.readUsername()
+            getBookings(userID) { fetchedBookings ->
+                bookingsData.value = fetchedBookings
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn {
-            items(bookingsData.size) { index ->
-                BookingCard(booking = bookingsData[index])
+        if (bookingsData.value.isEmpty()) {
+            // Display a message when there are no bookings
+            Text(
+                text = "No bookings available",
+                modifier = Modifier.padding(16.dp),
+                style = TextStyle(
+                    fontWeight = FontWeight.W600,
+                    fontSize = 20.sp
+                )
+            )
+        } else {
+            LazyColumn {
+                items(bookingsData.value) { booking ->
+                    BookingCard(booking = booking)
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun BookingCard(booking: BookingDemoData) {
@@ -229,15 +208,6 @@ fun BookingCard(booking: BookingDemoData) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-//            Row(verticalAlignment = Alignment.Bottom) {
-//                Text(
-//                    text = "$${booking.totalCost}", style = TextStyle(
-//                        fontWeight = FontWeight.W500,
-//                        fontSize = 32.sp,
-//                    )
-//                )
-//            }
-
             Column() {
                 Text(
                     text = "Total Cost",
@@ -246,7 +216,8 @@ fun BookingCard(booking: BookingDemoData) {
                         fontSize = 16.sp
                     )
                 )
-                Text(text = "$${booking.totalCost}")
+                val formattedTotalCost = DecimalFormat("0.00").format(booking.totalCost)
+                Text(text = "$$formattedTotalCost")
             }
         }
     }
@@ -256,7 +227,52 @@ fun BookingCard(booking: BookingDemoData) {
 @Composable
 fun BookingCardPreview() {
     Group9_MAPD721Theme {
-        //HomePage()
-        BookingCard(bookingsData[0])
+        BookingCard(booking = BookingDemoData(
+            bookingId = "BD001",
+            imageUrl = "https://cf.bstatic.com/xdata/images/hotel/max1280x900/157081615.jpg?k=e8b1951d8e07cd1dbf710065bfa7b2a1f3184ce31435ba6d59d1f6228eec9de9&o=",
+            hotelId = "H001",
+            hotelName = "Luxury Hotel",
+            bookedBy = "John Doe",
+            checkInDate = "2024-05-01",
+            checkOutDate = "2024-05-05",
+            guests = 2,
+            rooms = 1,
+            totalCost = 500.00
+        ))
     }
+}
+
+fun getBookings(userID: String, onBookingsFetched: (List<BookingDemoData>) -> Unit) {
+    FirebaseFirestore.getInstance().collection("users")
+        .document(userID)
+        .collection("bookings")
+        .get()
+        .addOnSuccessListener { querySnapshot: QuerySnapshot ->
+            val bookings = querySnapshot.documents.map { document ->
+                val data = document.data
+                val numberOfRooms = data?.get("numberOfRooms")
+                val rooms = when (numberOfRooms) {
+                    is Number -> numberOfRooms.toInt() // Convert Number to Int
+                    else -> {
+                        Log.e("BookingData", "Unexpected type for numberOfRooms: ${numberOfRooms?.javaClass?.simpleName}")
+                        0 // Default value in case of unexpected type or null
+                    }
+                }
+                BookingDemoData(
+                    bookingId =  document.id.takeLast(6),
+                    imageUrl = data?.get("hotelImage") as String,
+                    hotelId = "1",
+                    hotelName = data["hotelName"] as String,
+                    bookedBy = userID,
+                    checkInDate = data["checkInDate"] as String,
+                    checkOutDate = data["checkOutDate"] as String,
+                    guests = 2,
+                    rooms = rooms,
+                    totalCost = data["totalAmount"] as Double )
+            }
+            onBookingsFetched(bookings)
+        }
+        .addOnFailureListener { e ->
+            Log.w("Booking_Failed", "Error fetching bookings", e)
+        }
 }
