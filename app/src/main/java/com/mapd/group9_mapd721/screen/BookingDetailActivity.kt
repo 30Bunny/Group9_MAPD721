@@ -439,7 +439,10 @@ fun CustomDatePicker(
                 title = "Pick a date",
                 allowedDateValidator = { date ->
                     date >= LocalDate.now() // Check if date is not earlier than today
-                }
+                },
+                colors = DatePickerDefaults.colors(
+                headerBackgroundColor = PrimaryColor,
+            )
             ) {
                 checkInDate.value = it // Set the check-in date
             }
