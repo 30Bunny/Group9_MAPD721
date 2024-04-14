@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
 import coil.compose.rememberAsyncImagePainter
 import com.mapd.group9_mapd721.R
 import com.mapd.group9_mapd721.model.HotelDetails
@@ -212,12 +213,10 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.width(24.dp))
                     Button(
                         onClick = {
-                            context.startActivity(
-                                Intent(
-                                    context,
-                                    BookingDetailActivity::class.java
-                                )
-                            )
+                            val intent = Intent(context, BookingDetailActivity::class.java).apply {
+                                putExtra("hotel", hotel)
+                            }
+                            context.startActivity(intent)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
                         elevation = ButtonDefaults.buttonElevation(
@@ -480,7 +479,7 @@ fun fetchHotelDetails(
     val detailsRequest = Request.Builder()
         .url("https://booking-com.p.rapidapi.com/v2/hotels/details?currency=CAD&locale=en-us&checkout_date=$nextDate&hotel_id=$hotelId&checkin_date=$currentDate")
         .get()
-        .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+        .addHeader("X-RapidAPI-Key", API_KEY)
         .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
         .build()
 
@@ -554,14 +553,14 @@ fun fetchDescriptionAndImages(
     val descriptionRequest = Request.Builder()
         .url("https://booking-com.p.rapidapi.com/v1/hotels/description?hotel_id=$hotelId&locale=en-us")
         .get()
-        .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+        .addHeader("X-RapidAPI-Key", API_KEY)
         .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
         .build()
 
     val imagesRequest = Request.Builder()
         .url("https://booking-com.p.rapidapi.com/v1/hotels/photos?hotel_id=$hotelId&locale=en-us")
         .get()
-        .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+        .addHeader("X-RapidAPI-Key", API_KEY)
         .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
         .build()
 

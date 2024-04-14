@@ -1,5 +1,8 @@
 package com.mapd.group9_mapd721.model
 
+import java.io.Serializable
+
+
 data class HotelDetails(
     var hotelId: String,
     var hotelName: String,
@@ -11,4 +14,4 @@ data class HotelDetails(
     var facilities: List<String>,
     var description: String,
     var imageUrls: List<String>,
-)
+) : Serializable

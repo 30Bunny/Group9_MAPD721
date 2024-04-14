@@ -69,6 +69,7 @@ import java.text.DecimalFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+const val API_KEY = "ae7cac4bc3msh045ee1f4f977080p15d03ejsna1e7c08a7996"
 // Step 1: Data class representing the items in the list
 data class PlaceListItem(val imageUrl: String, val name: String)
 
@@ -430,7 +431,7 @@ fun fetchHotels(onSuccess: (List<HotelListing>) -> Unit, onError: (String) -> Un
         val request = Request.Builder()
             .url("https://booking-com.p.rapidapi.com/v1/hotels/search?checkout_date=$nextDate&order_by=popularity&filter_by_currency=CAD&room_number=1&dest_id=38&dest_type=country&adults_number=2&checkin_date=$currentDate&locale=en-us&units=metric")
             .get()
-            .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
+            .addHeader("X-RapidAPI-Key", API_KEY)
             .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
             .build()
 

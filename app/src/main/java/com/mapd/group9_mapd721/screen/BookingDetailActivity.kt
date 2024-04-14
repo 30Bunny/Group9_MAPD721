@@ -62,9 +62,11 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.tooling.preview.Preview
+import com.mapd.group9_mapd721.model.HotelDetails
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -94,7 +96,24 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val activity = (LocalContext.current as? Activity)
+    val basePrice = remember { mutableStateOf(0.0) }
     val totalPrice = remember { mutableStateOf(0.0) }
+    var showDialog by remember { mutableStateOf(false) }
+    val guestList = remember { mutableStateListOf<Guest>() }
+    var rooms by rememberSaveable { mutableStateOf(1f) } // Default to 1 room
+    val checkInDate = rememberSaveable { mutableStateOf(LocalDate.now())}
+    val checkOutDate = rememberSaveable { mutableStateOf(LocalDate.now().plusDays(1))} // Default to next day
+
+    // Calculate the number of nights
+    var nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
+
+    val hotel = activity?.intent?.getSerializableExtra("hotel") as? HotelDetails
+
+    LaunchedEffect(key1 = true) {
+        basePrice.value = hotel?.pricePerNight ?: 0.0
+        totalPrice.value = hotel?.pricePerNight ?: 0.0
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -104,7 +123,7 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
                     }
                 },
                 title = {
-                    Text("Majestic Plaza Hotel")
+                    Text(hotel?.hotelName ?: "")
                 }
 
             )
@@ -125,7 +144,7 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
                         )
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
-                                text = "$${totalPrice.value}",
+                                text = "$${String.format("%.2f", totalPrice.value)}",
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 fontSize = 20.sp
@@ -135,7 +154,14 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.width(24.dp))
                     Button(
                         onClick = {
-                            context.startActivity(Intent(context, PaymentActivity::class.java))
+                            val intent = Intent(context, PaymentActivity::class.java).apply {
+                                putExtra("hotel", hotel)
+                                putExtra("check_in_date", checkInDate.value.format(DateTimeFormatter.ISO_DATE))
+                                putExtra("check_out_date", checkOutDate.value.format(DateTimeFormatter.ISO_DATE))
+                                putExtra("number_of_rooms", rooms.toInt())
+                                putExtra("total_price", totalPrice.value)
+                            }
+                            context.startActivity(intent)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
                         elevation = ButtonDefaults.buttonElevation(
@@ -156,7 +182,47 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(innerPadding)
             .verticalScroll(scrollState)) {
-            BookingDetailsNew(modifier = modifier, totalPrice = totalPrice)
+            //BookingDetailsNew(modifier = modifier, totalPrice = totalPrice)
+            Column(modifier = Modifier.padding(16.dp)) {
+                CustomDatePicker(checkInDate, checkOutDate, onAccept = {
+//                    nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
+//                    totalPrice.value = calculateTotalPrice(rooms.toInt(), nights, basePrice.value)
+                })
+                Spacer(modifier = Modifier.height(16.dp))
+                if (showDialog) {
+                    AddGuestDialog(
+                        showDialog = showDialog,
+                        onDismiss = { showDialog = false },
+                        onAddGuest = { guest ->
+                            guestList.add(guest)
+                            showDialog = false
+                        }
+                    )
+                }
+
+                // Slider for selecting the number of rooms
+                Text("Number of Rooms: ${rooms.toInt()}")
+                Slider(
+                    value = rooms,
+                    onValueChange = { newValue ->
+                        rooms = newValue
+                        totalPrice.value = calculateTotalPrice(rooms.toInt(), nights, basePrice.value)
+                                    },
+                    valueRange = 1f..10f, // Assuming the user can select from 1 to 10 rooms
+                    steps = 10, // Step size, adjust according to your needs
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+//                Spacer(modifier = Modifier.height(16.dp))
+//
+//                Button(onClick = { showDialog = true }) {
+//                    Text("Add Guest")
+//                }
+//
+//                Spacer(modifier = Modifier.height(16.dp))
+//                GuestList(guestList = guestList)
+
+            }
         }
     }
 
@@ -176,12 +242,14 @@ fun BookingDetailsNew(modifier: Modifier = Modifier, totalPrice: MutableState<Do
     val nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
 
     // Calculate the total price
-    val calculatedTotalPrice = calculateTotalPrice(rooms.toInt(), nights)
+    val calculatedTotalPrice = calculateTotalPrice(rooms.toInt(), nights, totalPrice.value)
     // Update the shared total price state
     totalPrice.value = calculatedTotalPrice
 
     Column(modifier = Modifier.padding(16.dp)) {
-        CustomDatePicker(checkInDate, checkOutDate)
+        CustomDatePicker(checkInDate, checkOutDate, onAccept = {
+
+        })
         Spacer(modifier = Modifier.height(16.dp))
         if (showDialog) {
             AddGuestDialog(
@@ -322,9 +390,10 @@ fun GuestList(guestList: MutableList<Guest>) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: MutableState<LocalDate>) {
+fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: MutableState<LocalDate>, onAccept: (Long?) -> Unit) {
     val isCheckInOpen = remember { mutableStateOf(false)}
     val isCheckOutOpen = remember { mutableStateOf(false)}
+    val state = rememberDatePickerState()
 
     Column(modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -366,6 +435,8 @@ fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: Mutable
                         .atZone(ZoneId.of("UTC"))
                         .toLocalDate()
 
+                    onAccept(state.selectedDateMillis)
+
                 }
             },
             onCancel = {
@@ -392,13 +463,13 @@ fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: Mutable
     }
 }
 
-fun calculateTotalPrice(rooms: Int, nights: Long): Double {
-    var totalPrice = 0.0
+fun calculateTotalPrice(rooms: Int, nights: Long, value: Double): Double {
+    var newTotalPrice = 0.0
     for (i in 0 until rooms) {
-        val basePrice = if (i == 0) 100.0 else 75.0
-        totalPrice += basePrice * nights
+        val basePrice = if (i == 0) value else 75.0
+        newTotalPrice += basePrice * nights
     }
-    return totalPrice
+    return newTotalPrice
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
