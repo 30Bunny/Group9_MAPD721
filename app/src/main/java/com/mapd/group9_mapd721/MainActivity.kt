@@ -79,12 +79,13 @@ class MainActivity : ComponentActivity() {
 fun MyApp(modifier: Modifier = Modifier) {
 // setting up the individual tabs
     val homeTab = TabBarItem(title = "Home", selectedIcon = Icons.Filled.Home, unselectedIcon = Icons.Outlined.Home)
-    val alertsTab = TabBarItem(title = "Notification", selectedIcon = Icons.Filled.Notifications, unselectedIcon = Icons.Outlined.Notifications, badgeAmount = 7)
+   // val alertsTab = TabBarItem(title = "Notification", selectedIcon = Icons.Filled.Notifications, unselectedIcon = Icons.Outlined.Notifications, badgeAmount = 7)
     val settingsTab = TabBarItem(title = "Booking", selectedIcon = Icons.Filled.DateRange, unselectedIcon = Icons.Outlined.DateRange)
     val moreTab = TabBarItem(title = "Profile", selectedIcon = Icons.Filled.Person, unselectedIcon = Icons.Outlined.Person)
 
     // creating a list of all the tabs
-    val tabBarItems = listOf(homeTab, alertsTab, settingsTab, moreTab)
+   // val tabBarItems = listOf(homeTab, alertsTab, settingsTab, moreTab)
+    val tabBarItems = listOf(homeTab, settingsTab, moreTab)
 
     // creating our navController
     val navController = rememberNavController()
@@ -98,9 +99,9 @@ fun MyApp(modifier: Modifier = Modifier) {
                 composable(homeTab.title) {
                     HomePage(navController)
                 }
-                composable(alertsTab.title) {
-                    NotificationPage()
-                }
+//                composable(alertsTab.title) {
+//                    NotificationPage()
+//                }
                 composable(settingsTab.title) {
                     BookingPage()
                 }

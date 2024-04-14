@@ -70,6 +70,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -79,6 +80,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import coil.request.ImageRequest
+import coil.size.OriginalSize
+import coil.size.Size
 import com.mapd.group9_mapd721.R
 import com.mapd.group9_mapd721.model.HotelDetails
 import com.mapd.group9_mapd721.model.HotelListing
@@ -444,19 +449,19 @@ fun HotelImageList(hotel: HotelDetails, modifier: Modifier = Modifier) {
             modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
-        LazyRow(
-            //modifier = Modifier.padding(horizontal = 16.dp),
-            content = {
-                items(hotel.imageUrls.size) { index ->
-                    HotelImageItem(
-                        hotel.imageUrls[index],
-                        isFirst = index == 0,
-                        isLast = index == (10 - 1)
-                    )
-                }
-            }
-        )
-        //StaggeredGridView(hotel)
+//        LazyRow(
+//            //modifier = Modifier.padding(horizontal = 16.dp),
+//            content = {
+//                items(hotel.imageUrls.size) { index ->
+//                    HotelImageItem(
+//                        hotel.imageUrls[index],
+//                        isFirst = index == 0,
+//                        isLast = index == (10 - 1)
+//                    )
+//                }
+//            }
+//        )
+        StaggeredGridView(hotel)
     }
 }
 
@@ -715,19 +720,14 @@ fun StaggeredGridView(hotel: HotelDetails) {
                     ) {
                         // inside our column we are creating an image.
                         Image(
-                            // on below line we are specifying the
-                            // drawable image for our image.
-//                            painterResource(id = img),
-                            rememberAsyncImagePainter(img),
-
-
-                            // on below line we are specifying
-                            // content description for our image
-                            contentDescription = "images",
-
-                            // on below line we are specifying
-                            // alignment for our image.
-                            alignment = Alignment.Center,
+                            painter = rememberAsyncImagePainter(
+                                ImageRequest.Builder(LocalContext.current)
+                                    .data(img)
+                                    .size(Size.ORIGINAL)
+                                    .crossfade(true)
+                                    .build()),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
