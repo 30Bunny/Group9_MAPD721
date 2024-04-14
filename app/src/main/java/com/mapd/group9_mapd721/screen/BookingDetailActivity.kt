@@ -38,12 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -56,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mapd.group9_mapd721.ui.theme.Group9_MAPD721Theme
@@ -64,15 +60,11 @@ import com.mapd.group9_mapd721.ui.theme.PrimaryColor
 import com.mapd.group9_mapd721.ui.theme.TertiaryColor
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.OffsetDateTime
-import java.util.Calendar
-import java.util.Date
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.tooling.preview.Preview
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -143,7 +135,7 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.width(24.dp))
                     Button(
                         onClick = {
-                            context.startActivity(Intent(context, BookingDetailActivity::class.java))
+                            context.startActivity(Intent(context, PaymentActivity::class.java))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
                         elevation = ButtonDefaults.buttonElevation(
@@ -409,5 +401,13 @@ fun calculateTotalPrice(rooms: Int, nights: Long): Double {
     return totalPrice
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true)
+@Composable
+fun GuestListPreview() {
+    Group9_MAPD721Theme {
+        GuestListScreen()
+    }
+}
 
 
