@@ -62,17 +62,30 @@ import com.example.bansidholakiya_mapd721_test.datastore.DataStoreManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.DecimalFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.io.IOException
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 
-// Step 1: Data class representing the items in the list
+val RAPID_API_KEY = "6c81df0c70mshc5835247215de11p14960cjsn71bdfcd130d8"
+val RAPID_API_HOST = "booking-com.p.rapidapi.com"
+
 data class PlaceListItem(val imageUrl: String, val name: String)
 
-// Step 2: Sample list of items
 val itemList = listOf(
     PlaceListItem(
         "https://media.cntraveler.com/photos/5b2c0684a98055277ea83e26/1:1/w_2667,h_2667,c_limit/CN-Tower_GettyImages-615764386.jpg",
@@ -103,41 +116,75 @@ fun HomePage(navController: NavController) {
     val context = LocalContext.current
     val dataStore = DataStoreManager(context)
     val scrollState = rememberScrollState()
-
+    val coroutineScope = rememberCoroutineScope()
 
     val cName = remember { mutableStateOf("") }
-    var hotelList by remember { mutableStateOf<List<HotelListing>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) } // Loading state
 
-    // Fetch hotels when the screen is initially displayed
+    var destId by remember { mutableStateOf<String>("38") }
+    var destType by remember { mutableStateOf<String>("country") }
+    var hotelList by remember { mutableStateOf<List<HotelListing>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    var searchText by remember { mutableStateOf("") }
+
     LaunchedEffect(Unit) {
         cName.value = dataStore.readCName()
+    }
 
-        fetchHotels(
-            onSuccess = { hotels ->
-                hotelList = hotels
-                isLoading = false // Set loading state to false when data is fetched
-                Log.d("HomePage", "Data fetched successfully")
-            },
-            onError = { error ->
-                // Handle error
-                isLoading = false // Set loading state to false in case of error
-                Log.e("HomePage", "Error fetching data: $error")
-            }
-        )
+    LaunchedEffect(destId, destType) {
+        if (destId.isNotEmpty() && destType.isNotEmpty()) {
+            fetchHotels(
+                destId,
+                destType,
+                onSuccess = { hotels ->
+                    hotelList = hotels
+                    isLoading = false // Set loading state to false when data is fetched
+                    Log.d("HomePage", "Data fetched successfully")
+                },
+                onError = { error ->
+                    // Handle error
+                    isLoading = false // Set loading state to false in case of error
+                    Log.e("HomePage", "Error fetching data: $error")
+                }
+            )
+        }
     }
 
     Log.d("HomePage", "isLoading: $isLoading")
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(color = PrimaryColor)
-        .verticalScroll(scrollState)) {
-        TopContainer(cName.value)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = PrimaryColor)
+            .verticalScroll(scrollState)
+    ) {
+        TopContainer(
+            cName.value,
+            searchText = searchText,
+            onSearchTextChanged = { searchText = it },
+            onSearchSubmitted = {
+                coroutineScope.launch {
+                    getDestinationId(
+                        query = searchText,
+                        onSuccess = { id, type ->
+                            Log.d("Destination ID:", id)
+                            Log.d("Destination type:", type)
+
+                            destId = id
+                            destType = type
+                        },
+                        onError = { error ->
+                            Log.e("HomePage", "Error getting destination ID: $error")
+                        }
+                    )
+                }
+            }
+        )
         if (isLoading) {
             // Show progress indicator if loading
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
                     .height(320.dp)
                     .background(color = Color.White),
                 contentAlignment = Alignment.Center
@@ -162,8 +209,10 @@ fun HomePage(navController: NavController) {
 }
 
 @Composable
-fun TopContainer(cName: String) {
-    var searchText by remember { mutableStateOf("") }
+fun TopContainer(
+    cName: String, searchText: String,
+    onSearchTextChanged: (String) -> Unit, onSearchSubmitted: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,21 +234,27 @@ fun TopContainer(cName: String) {
             Spacer(modifier = Modifier.height(24.dp))
             CircularSearchBar(
                 modifier = Modifier.fillMaxWidth(),
-                onSearchTextChanged = { searchText = it },
-                searchText = searchText
+                onSearchTextChanged = onSearchTextChanged,
+                searchText = searchText,
+                onSearchSubmitted = onSearchSubmitted
             )
         }
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CircularSearchBar(
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color.White.copy(alpha = 0.5f),
     hint: String = "Search...",
     onSearchTextChanged: (String) -> Unit,
-    searchText: String
+    searchText: String,
+    onSearchSubmitted: () -> Unit,
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
     Surface(
         modifier = modifier.padding(horizontal = 0.dp),
         shape = CircleShape,
@@ -227,6 +282,14 @@ fun CircularSearchBar(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent,
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        onSearchSubmitted()
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }
                 )
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -234,7 +297,13 @@ fun CircularSearchBar(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable {
+                        onSearchSubmitted()
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }
             )
         }
 
@@ -242,7 +311,11 @@ fun CircularSearchBar(
 }
 
 @Composable
-fun HotelList(hotelList: List<HotelListing>,modifier: Modifier = Modifier, onItemClick: (String) -> Unit) {
+fun HotelList(
+    hotelList: List<HotelListing>,
+    modifier: Modifier = Modifier,
+    onItemClick: (String) -> Unit
+) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
@@ -251,7 +324,7 @@ fun HotelList(hotelList: List<HotelListing>,modifier: Modifier = Modifier, onIte
     ) {
         Column() {
             Text(
-                text = "Hotel Near You",
+                text = "Hotels Near You",
                 style = TextStyle(
                     color = Color.Black,
                     fontSize = 20.sp,
@@ -263,7 +336,12 @@ fun HotelList(hotelList: List<HotelListing>,modifier: Modifier = Modifier, onIte
                 //modifier = Modifier.padding(horizontal = 16.dp),
                 content = {
                     items(hotelList.size) { index ->
-                        HotelItem(hotelList[index], isFirst = index == 0, isLast = index == hotelList.size - 1, onItemClick)
+                        HotelItem(
+                            hotelList[index],
+                            isFirst = index == 0,
+                            isLast = index == hotelList.size - 1,
+                            onItemClick
+                        )
                     }
                 }
             )
@@ -272,12 +350,18 @@ fun HotelList(hotelList: List<HotelListing>,modifier: Modifier = Modifier, onIte
 }
 
 @Composable
-fun HotelItem(hotel: HotelListing, isFirst: Boolean, isLast: Boolean, onItemClick: (String) -> Unit) {
+fun HotelItem(
+    hotel: HotelListing,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onItemClick: (String) -> Unit
+) {
     val startPadding = if (isFirst) 16.dp else 8.dp
     val endPadding = if (isLast) 16.dp else 8.dp
     Card(
         modifier = Modifier
-            .padding(start = startPadding, end = endPadding).clickable { onItemClick(hotel.id) },
+            .padding(start = startPadding, end = endPadding)
+            .clickable { onItemClick(hotel.id) },
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
         ),
@@ -419,7 +503,11 @@ fun navigateToHotelDetailScreen(context: Context, hotelId: String) {
 
 
 @RequiresApi(Build.VERSION_CODES.O)
-fun fetchHotels(onSuccess: (List<HotelListing>) -> Unit, onError: (String) -> Unit) {
+fun fetchHotels(
+    destId: String = "38",
+    destType: String = "country",
+    onSuccess: (List<HotelListing>) -> Unit, onError: (String) -> Unit
+) {
     GlobalScope.launch(Dispatchers.IO) {
         val client = OkHttpClient()
 
@@ -427,11 +515,15 @@ fun fetchHotels(onSuccess: (List<HotelListing>) -> Unit, onError: (String) -> Un
         val currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val nextDate = LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
+        val url =
+            "https://booking-com.p.rapidapi.com/v1/hotels/search?checkout_date=$nextDate&order_by=popularity&filter_by_currency=CAD&room_number=1&dest_id=$destId&dest_type=$destType&adults_number=2&checkin_date=$currentDate&locale=en-us&units=metric"
+        Log.d("MYURL", url)
+
         val request = Request.Builder()
-            .url("https://booking-com.p.rapidapi.com/v1/hotels/search?checkout_date=$nextDate&order_by=popularity&filter_by_currency=CAD&room_number=1&dest_id=38&dest_type=country&adults_number=2&checkin_date=$currentDate&locale=en-us&units=metric")
+            .url(url)
             .get()
-            .addHeader("X-RapidAPI-Key", "1a071bbc5fmsh274b3c6c1ae9fffp1fdde7jsn5c083c6a4219")
-            .addHeader("X-RapidAPI-Host", "booking-com.p.rapidapi.com")
+            .addHeader("X-RapidAPI-Key", RAPID_API_KEY)
+            .addHeader("X-RapidAPI-Host", RAPID_API_HOST)
             .build()
 
         val response = client.newCall(request).execute()
@@ -456,10 +548,11 @@ fun parseHotels(responseData: String?): List<HotelListing> {
             val hotelImage = hotelObject.optString("max_photo_url", "")
             val hotelId = hotelObject.optString("hotel_id", "")
             val decimalFormat = DecimalFormat("#.##")
-            val price = decimalFormat.format(hotelObject.optDouble("min_total_price", 0.0)).toDouble()
+            val price =
+                decimalFormat.format(hotelObject.optDouble("min_total_price", 0.0)).toDouble()
             val city = hotelObject.optString("city", "")
 
-            val hotelListing = HotelListing(hotelId, hotelName, hotelImage , price, city)
+            val hotelListing = HotelListing(hotelId, hotelName, hotelImage, price, city)
             //Log.d("List", hotelListing.toString())
             hotels.add(hotelListing)
         }
@@ -467,6 +560,85 @@ fun parseHotels(responseData: String?): List<HotelListing> {
     Log.d("List", hotels.toString())
     return hotels
 }
+
+fun parseResponse(
+    responseBody: String?,
+    onSuccess: (String, String) -> Unit,
+    onError: (String) -> Unit
+) {
+    try {
+        // Check if response body is not null or empty
+        if (!responseBody.isNullOrBlank()) {
+            // Parse the JSON array from the response body
+            val jsonArray = JSONArray(responseBody)
+
+            // Check if the array is not empty
+            if (jsonArray.length() > 0) {
+                // Get the first object from the array
+                val firstObject = jsonArray.getJSONObject(0)
+
+                // Extract the `name` and `dest_type` properties from the first object
+                val destId = firstObject.optString("dest_id", "")
+                val destType = firstObject.optString("dest_type", "")
+
+                // Call the onSuccess callback with the extracted data
+                onSuccess(destId, destType)
+            } else {
+                onError("No data available in the response array")
+            }
+        } else {
+            onError("Empty response body")
+        }
+    } catch (e: Exception) {
+        onError("Error parsing response: ${e.message}")
+    }
+}
+
+fun getDestinationId(
+    query: String,
+    onSuccess: (String, String) -> Unit,
+    onError: (String) -> Unit
+) {
+    val client = OkHttpClient()
+
+    if (query.isBlank()) {
+        // If searchText is empty, use default values
+        onSuccess("38", "country")
+        return
+    }
+
+    val request = Request.Builder()
+        .url("https://booking-com.p.rapidapi.com/v1/hotels/locations?name=$query&locale=en-us")
+        .get()
+        .addHeader("X-RapidAPI-Key", RAPID_API_KEY)
+        .addHeader("X-RapidAPI-Host", RAPID_API_HOST)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            onError("Failed to make API call: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (!response.isSuccessful) {
+                onError("Failed to get response: ${response.code}")
+                return
+            }
+
+            val responseBody = response.body?.string()
+            parseResponse(
+                responseBody,
+                onSuccess = { destId, destType ->
+                    Log.d("Destination ID:", destId)
+                    Log.d("Destination type:", destType)
+                    onSuccess(destId, destType)
+                },
+                onError = onError
+            )
+        }
+    })
+}
+
 
 @Preview(showBackground = true)
 @Composable
