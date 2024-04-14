@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -30,6 +31,7 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerColors
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -64,12 +66,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.tooling.preview.Preview
 import com.mapd.group9_mapd721.model.HotelDetails
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+import com.vanpra.composematerialdialogs.MaterialDialog
+import com.vanpra.composematerialdialogs.datetime.date.DatePickerDefaults
+import com.vanpra.composematerialdialogs.datetime.date.datepicker
+import com.vanpra.composematerialdialogs.datetime.time.timepicker
+import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 
 class BookingDetailActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
@@ -105,6 +114,7 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
     val checkOutDate = rememberSaveable { mutableStateOf(LocalDate.now().plusDays(1))} // Default to next day
 
     // Calculate the number of nights
+
     var nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
 
     val hotel = activity?.intent?.getSerializableExtra("hotel") as? HotelDetails
@@ -188,6 +198,7 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
 //                    nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
 //                    totalPrice.value = calculateTotalPrice(rooms.toInt(), nights, basePrice.value)
                 })
+
                 Spacer(modifier = Modifier.height(16.dp))
                 if (showDialog) {
                     AddGuestDialog(
@@ -390,10 +401,13 @@ fun GuestList(guestList: MutableList<Guest>) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: MutableState<LocalDate>, onAccept: (Long?) -> Unit) {
-    val isCheckInOpen = remember { mutableStateOf(false)}
-    val isCheckOutOpen = remember { mutableStateOf(false)}
-    val state = rememberDatePickerState()
+fun CustomDatePicker(
+    checkInDate: MutableState<LocalDate>,
+    checkOutDate: MutableState<LocalDate>,
+    onAccept: (Long?) -> Unit
+) {
+    val checkInDateDialogState = rememberMaterialDialogState()
+    val checkOutDateDialogState = rememberMaterialDialogState()
 
     Column(modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -401,11 +415,33 @@ fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: Mutable
                 readOnly = true,
                 value = checkInDate.value.format(DateTimeFormatter.ISO_DATE),
                 label = { Text("Check-In Date") },
-                onValueChange = {})
+                onValueChange = {}
+            )
             IconButton(
-                onClick = { isCheckInOpen.value = true } // show de dialog
+                onClick = { checkInDateDialogState.show() }
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Calendar")
+            }
+        }
+
+        // DatePicker for Check-in Date
+        MaterialDialog(
+            dialogState = checkInDateDialogState,
+            buttons = {
+                positiveButton(text = "Ok") {
+                    onAccept(null) // Pass null because the date picker will handle setting the date
+                }
+                negativeButton(text = "Cancel")
+            }
+        ) {
+            datepicker(
+                initialDate = checkInDate.value,
+                title = "Pick a date",
+                allowedDateValidator = { date ->
+                    date >= LocalDate.now() // Check if date is not earlier than today
+                }
+            ) {
+                checkInDate.value = it // Set the check-in date
             }
         }
 
@@ -416,52 +452,46 @@ fun CustomDatePicker(checkInDate: MutableState<LocalDate>, checkOutDate: Mutable
                 readOnly = true,
                 value = checkOutDate.value.format(DateTimeFormatter.ISO_DATE),
                 label = { Text("Check-Out Date") },
-                onValueChange = {})
+                onValueChange = {}
+            )
             IconButton(
-                onClick = { isCheckOutOpen.value = true } // show de dialog
+                onClick = {
+                    checkOutDateDialogState.show()
+                }
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Calendar")
             }
         }
-    }
 
-    if (isCheckInOpen.value) {
-        CustomDatePickerDialog(
-            onAccept = {
-                isCheckInOpen.value = false // close dialog
-                if (it != null) { // Set the check-in date
-                    checkInDate.value = Instant
-                        .ofEpochMilli(it)
-                        .atZone(ZoneId.of("UTC"))
-                        .toLocalDate()
-
-                    onAccept(state.selectedDateMillis)
-
+        // DatePicker for Checkout Date
+        MaterialDialog(
+            dialogState = checkOutDateDialogState,
+            buttons = {
+                positiveButton(text = "Ok") {
+                    // No need to set the checkout date here since it will be handled by the DatePicker
                 }
-            },
-            onCancel = {
-                isCheckInOpen.value = false //close dialog
+                negativeButton(text = "Cancel")
             }
-        )
-    }
-
-    if (isCheckOutOpen.value) {
-        CustomDatePickerDialog(
-            onAccept = {
-                isCheckOutOpen.value = false // close dialog
-                if (it != null) { // Set the check-out date
-                    checkOutDate.value = Instant
-                        .ofEpochMilli(it)
-                        .atZone(ZoneId.of("UTC"))
-                        .toLocalDate()
+        ) {
+            datepicker(
+                initialDate = checkOutDate.value,
+                title = "Pick a date",
+                allowedDateValidator = { date ->
+                    date >= LocalDate.now() && date >= checkInDate.value // Check if date is not earlier than today and check-in date
                 }
-            },
-            onCancel = {
-                isCheckOutOpen.value = false //close dialog
+            ) { selectedDate ->
+                val adjustedCheckOutDate = if (selectedDate.isBefore(checkInDate.value)) {
+                    // If selected date is before check-in date, set it to be the next day
+                    checkInDate.value.plusDays(1)
+                } else {
+                    selectedDate
+                }
+                checkOutDate.value = adjustedCheckOutDate // Set the adjusted check-out date
             }
-        )
+        }
     }
 }
+
 
 fun calculateTotalPrice(rooms: Int, nights: Long, value: Double): Double {
     var newTotalPrice = 0.0

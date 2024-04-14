@@ -71,6 +71,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("io.coil-kt:coil-compose:2.0.0-rc01")
+    implementation("io.github.vanpra.compose-material-dialogs:datetime:0.8.1-rc")
 
     implementation(platform("com.google.firebase:firebase-bom:32.8.0"))
     implementation("androidx.datastore:datastore-preferences:1.0.0")
