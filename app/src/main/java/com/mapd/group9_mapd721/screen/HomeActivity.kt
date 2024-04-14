@@ -138,12 +138,12 @@ fun HomePage(navController: NavController) {
                 destType,
                 onSuccess = { hotels ->
                     hotelList = hotels
-                    isLoading = false // Set loading state to false when data is fetched
+                    isLoading = false
                     Log.d("HomePage", "Data fetched successfully")
                 },
                 onError = { error ->
                     // Handle error
-                    isLoading = false // Set loading state to false in case of error
+                    isLoading = false
                     Log.e("HomePage", "Error fetching data: $error")
                 }
             )

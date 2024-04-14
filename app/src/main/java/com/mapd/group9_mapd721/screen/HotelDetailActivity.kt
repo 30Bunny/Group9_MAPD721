@@ -135,6 +135,8 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val activity = (LocalContext.current as? Activity)
 
+    var isLoading by remember { mutableStateOf(true) }
+
     var hotel by remember {
         mutableStateOf<HotelDetails>(
             HotelDetails(
@@ -151,16 +153,19 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
             )
         )
     }
+
     LaunchedEffect(Unit) {
         GlobalScope.launch(Dispatchers.IO) {
             fetchHotelDetails(
                 hotelId = hotelId,
                 onSuccess = { item ->
                     hotel = item
+                    isLoading = false
                     Log.d("HOTLE", hotel.toString())
                 },
                 onError = { error ->
                     Log.e("HomePage", "Error fetching data: $error")
+                    isLoading = false
                 }
             )
         }
@@ -231,17 +236,29 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
 
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(scrollState)
-        ) {
-            ImageView(hotel)
-            HotelNameHeader(hotel, modifier = modifier)
-            HotelFacilityView(hotel, modifier = modifier)
-            HotelDescriptionView(hotel, modifier = modifier)
-            HotelImageList(hotel, modifier)
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(scrollState)
+            ) {
+                ImageView(hotel)
+                HotelNameHeader(hotel, modifier = modifier)
+                HotelFacilityView(hotel, modifier = modifier)
+                HotelDescriptionView(hotel, modifier = modifier)
+                HotelImageList(hotel, modifier)
+            }
         }
     }
 }
@@ -264,16 +281,17 @@ fun ImageView(hotel: HotelDetails) {
             Image(
                 painter = rememberAsyncImagePainter(imageUrl),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
 //                        .height(400.dp)
-                    .aspectRatio(1f/ 1f)
+                    .aspectRatio(1f / 1f)
             )
         } else {
             // You can show a placeholder or loading indicator here
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f/ 1f) // You can adjust the aspect ratio as needed
+                    .aspectRatio(1f / 1f) // You can adjust the aspect ratio as needed
                     .background(Color.LightGray), // Placeholder color
             ) {
                 // You can customize the loading indicator here, for example, a progress bar
@@ -386,7 +404,13 @@ fun RoundedOutlineContainer(
             .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = text, style = TextStyle(textAlign = TextAlign.Center), color = TertiaryColor, fontWeight = FontWeight.Normal, fontSize = 14.sp)
+        Text(
+            text = text,
+            style = TextStyle(textAlign = TextAlign.Center),
+            color = TertiaryColor,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp
+        )
     }
 }
 
@@ -509,8 +533,10 @@ fun parseHotelDetails(responseData: String?): HotelDetails {
         val city = jsonObject.optString("city")
         val rating = jsonObject.optJSONObject("wifi_review_score")!!.optString("rating").toFloat()
         val decimalFormat = DecimalFormat("#.##")
-        val pricePerNight = decimalFormat.format(jsonObject.optJSONObject("composite_price_breakdown")
-            ?.optJSONObject("gross_amount_per_night")?.optDouble("value", 0.0)).toDouble()
+        val pricePerNight = decimalFormat.format(
+            jsonObject.optJSONObject("composite_price_breakdown")
+                ?.optJSONObject("gross_amount_per_night")?.optDouble("value", 0.0)
+        ).toDouble()
 
         val facilities = jsonObject.optJSONObject("facilities_block")?.optJSONArray("facilities")
             ?.let { jsonArrayToStringList(it) }
@@ -522,7 +548,7 @@ fun parseHotelDetails(responseData: String?): HotelDetails {
             countryCode = countryCode,
             city = city,
             pricePerNight = pricePerNight ?: 0.0,
-            rating = rating/2,
+            rating = rating / 2,
             facilities = facilities ?: emptyList()
         )
 
@@ -693,7 +719,6 @@ fun StaggeredGridView(hotel: HotelDetails) {
                             // drawable image for our image.
 //                            painterResource(id = img),
                             rememberAsyncImagePainter(img),
-
 
 
                             // on below line we are specifying
