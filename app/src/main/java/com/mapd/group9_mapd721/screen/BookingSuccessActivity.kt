@@ -91,7 +91,7 @@ fun BookingSuccessScreen(){
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Thank you for choosing us! Feel free to continue booking and explore our wide range of hotels.\n Happy Journey!",
+            text = "Thank you for choosing us! Feel free to explore our wide range of hotels.\n Happy Journey!",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             textAlign = TextAlign.Center
@@ -110,7 +110,7 @@ fun BookingSuccessScreen(){
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Continue Booking")
+            Text(text = "Continue Exploring")
         }
     }
 }
