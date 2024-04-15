@@ -2,6 +2,8 @@ package com.mapd.group9_mapd721.screen
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -80,6 +82,11 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.mapd.group9_mapd721.Manifest
+import java.util.Locale
 
 val RAPID_API_KEY = "6c81df0c70mshc5835247215de11p14960cjsn71bdfcd130d8"
 val RAPID_API_HOST = "booking-com.p.rapidapi.com"
@@ -126,6 +133,9 @@ fun HomePage(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
 
     var searchText by remember { mutableStateOf("") }
+
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    val geocoder = remember { Geocoder(context, Locale.getDefault()) }
 
     LaunchedEffect(Unit) {
         cName.value = dataStore.readCName()

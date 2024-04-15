@@ -232,7 +232,8 @@ fun HotelDetailView(modifier: Modifier = Modifier) {
                             defaultElevation = 8.dp,
                             pressedElevation = 16.dp
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
                     ) {
                         Text(text = "Book Now")
                     }

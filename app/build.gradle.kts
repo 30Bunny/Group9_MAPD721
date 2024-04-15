@@ -74,6 +74,8 @@ dependencies {
     implementation("io.github.vanpra.compose-material-dialogs:datetime:0.8.1-rc")
 
     implementation(platform("com.google.firebase:firebase-bom:32.8.0"))
+    implementation ("com.google.android.gms:play-services-location:21.2.0")
+
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
 }

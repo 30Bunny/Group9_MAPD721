@@ -114,7 +114,6 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
     val checkOutDate = rememberSaveable { mutableStateOf(LocalDate.now().plusDays(1))} // Default to next day
 
     // Calculate the number of nights
-
     var nights = checkOutDate.value.toEpochDay() - checkInDate.value.toEpochDay()
 
     val hotel = activity?.intent?.getSerializableExtra("hotel") as? HotelDetails
