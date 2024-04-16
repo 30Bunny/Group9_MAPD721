@@ -321,7 +321,7 @@ fun HotelNameHeader(hotel: HotelDetails, modifier: Modifier) {
             Text(
                 text = hotel.hotelName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
+                maxLines = 3,
                 fontWeight = FontWeight.Medium,
                 fontSize = 22.sp
             )

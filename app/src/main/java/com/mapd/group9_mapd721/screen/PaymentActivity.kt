@@ -24,10 +24,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -36,6 +40,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -118,6 +123,20 @@ fun PaymentScreen() {
         modifier = Modifier
             //.padding(20.dp)
             .background(color = Color.White),
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = { activity?.finish() }) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                title = {
+                    Text("Checkout",
+                        maxLines = 1)
+                }
+
+            )
+        },
         bottomBar = {
             BottomAppBar(
                 containerColor = Color.White,

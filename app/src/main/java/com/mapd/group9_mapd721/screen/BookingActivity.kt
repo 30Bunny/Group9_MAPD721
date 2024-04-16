@@ -6,10 +6,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -17,6 +25,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +50,7 @@ data class BookingDemoData(
     val totalCost: Double
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookingPage() {
     val context = LocalContext.current
@@ -51,27 +61,32 @@ fun BookingPage() {
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             val userID = dataStore.readUsername()
-            getBookings(userID) { fetchedBookings ->
+            val userName = dataStore.readCName()
+            getBookings(userID, userName) { fetchedBookings ->
                 bookingsData.value = fetchedBookings
             }
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (bookingsData.value.isEmpty()) {
-            // Display a message when there are no bookings
-            Text(
-                text = "No bookings available",
-                modifier = Modifier.padding(16.dp),
-                style = TextStyle(
-                    fontWeight = FontWeight.W600,
-                    fontSize = 20.sp
+    Scaffold { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            if (bookingsData.value.isEmpty()) {
+                // Display a message when there are no bookings
+                Text(
+                    text = "No bookings available",
+                    modifier = Modifier.padding(16.dp)
+                        .fillMaxHeight(),
+                    style = TextStyle(
+                        fontWeight = FontWeight.W500,
+                        fontSize = 20.sp,
+                    )
                 )
-            )
-        } else {
-            LazyColumn {
-                items(bookingsData.value) { booking ->
-                    BookingCard(booking = booking)
+            } else {
+                LazyColumn {
+                    items(bookingsData.value) { booking ->
+                        BookingCard(booking = booking)
+                    }
                 }
             }
         }
@@ -94,7 +109,7 @@ fun BookingCard(booking: BookingDemoData) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "#" + booking.bookingId,
+                text = "#HM-" + booking.bookingId,
                 style = TextStyle(
                     fontWeight = FontWeight.W500,
                     fontSize = 20.sp
@@ -118,27 +133,30 @@ fun BookingCard(booking: BookingDemoData) {
             Text(
                 text = booking.hotelName, style = TextStyle(
                     fontWeight = FontWeight.W500,
-                    fontSize = 32.sp
+                    fontSize = 24.sp
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "Booked by",
-                style = TextStyle(
-                    fontWeight = FontWeight.W600,
-                    fontSize = 16.sp
-                )
-            )
-
-            Text(text = booking.bookedBy)
-
-            Spacer(modifier = Modifier.height(10.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(0.5f)
+                ) {
+                    Text(
+                        text = "Booked by",
+                        style = TextStyle(
+                            fontWeight = FontWeight.W600,
+                            fontSize = 16.sp
+                        )
+                    )
+                    Text(text = booking.bookedBy)
+                }
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -152,21 +170,6 @@ fun BookingCard(booking: BookingDemoData) {
                         )
                     )
                     Text(text = booking.rooms.toString())
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(0.5f)
-                ) {
-                    Text(
-                        text = "Guests",
-                        style = TextStyle(
-                            fontWeight = FontWeight.W600,
-                            fontSize = 16.sp
-                        )
-                    )
-                    Text(text = booking.guests.toString())
                 }
             }
 
@@ -242,7 +245,11 @@ fun BookingCardPreview() {
     }
 }
 
-fun getBookings(userID: String, onBookingsFetched: (List<BookingDemoData>) -> Unit) {
+fun getBookings(
+    userID: String,
+    userName: String,
+    onBookingsFetched: (List<BookingDemoData>) -> Unit
+) {
     FirebaseFirestore.getInstance().collection("users")
         .document(userID)
         .collection("bookings")
@@ -263,7 +270,7 @@ fun getBookings(userID: String, onBookingsFetched: (List<BookingDemoData>) -> Un
                     imageUrl = data?.get("hotelImage") as String,
                     hotelId = "1",
                     hotelName = data["hotelName"] as String,
-                    bookedBy = userID,
+                    bookedBy = userName,
                     checkInDate = data["checkInDate"] as String,
                     checkOutDate = data["checkOutDate"] as String,
                     guests = 2,

@@ -68,6 +68,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import com.mapd.group9_mapd721.model.HotelDetails
 import java.time.LocalDate
@@ -132,7 +133,8 @@ fun GuestListScreen(modifier: Modifier = Modifier) {
                     }
                 },
                 title = {
-                    Text(hotel?.hotelName ?: "")
+                    Text(hotel?.hotelName ?: "",
+                        maxLines = 1)
                 }
 
             )
@@ -427,10 +429,10 @@ fun CustomDatePicker(
         MaterialDialog(
             dialogState = checkInDateDialogState,
             buttons = {
-                positiveButton(text = "Ok") {
+                positiveButton(text = "Ok", textStyle = TextStyle(color = PrimaryColor)) {
                     onAccept() // Pass null because the date picker will handle setting the date
                 }
-                negativeButton(text = "Cancel")
+                negativeButton(text = "Cancel", textStyle = TextStyle(color = PrimaryColor))
             }
         ) {
             datepicker(
@@ -441,6 +443,7 @@ fun CustomDatePicker(
                 },
                 colors = DatePickerDefaults.colors(
                 headerBackgroundColor = PrimaryColor,
+                dateActiveBackgroundColor = PrimaryColor
             )
             ) {
                 checkInDate.value = it // Set the check-in date
@@ -469,11 +472,11 @@ fun CustomDatePicker(
         MaterialDialog(
             dialogState = checkOutDateDialogState,
             buttons = {
-                positiveButton(text = "Ok") {
+                positiveButton(text = "Ok", textStyle = TextStyle(color = PrimaryColor)) {
                     onAccept()
                     // No need to set the checkout date here since it will be handled by the DatePicker
                 }
-                negativeButton(text = "Cancel")
+                negativeButton(text = "Cancel", textStyle = TextStyle(color = PrimaryColor))
             }
         ) {
             datepicker(
@@ -481,7 +484,11 @@ fun CustomDatePicker(
                 title = "Pick a date",
                 allowedDateValidator = { date ->
                     date >= LocalDate.now() && date >= checkInDate.value // Check if date is not earlier than today and check-in date
-                }
+                },
+                colors = DatePickerDefaults.colors(
+                    headerBackgroundColor = PrimaryColor,
+                    dateActiveBackgroundColor = PrimaryColor
+                )
             ) { selectedDate ->
                 val adjustedCheckOutDate = if (selectedDate.isBefore(checkInDate.value)) {
                     // If selected date is before check-in date, set it to be the next day
