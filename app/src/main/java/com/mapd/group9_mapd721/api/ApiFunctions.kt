@@ -17,7 +17,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 object ApiFunctions {
-    val RAPID_API_KEY = "b1ac5d66c0msh91f2fc3b1e0d478p154bbejsn31bea3e057b4"
+    val RAPID_API_KEY = "ae7cac4bc3msh045ee1f4f977080p15d03ejsna1e7c08a7996"
+    //val RAPID_API_KEY = "b1ac5d66c0msh91f2fc3b1e0d478p154bbejsn31bea3e057b4"
     val RAPID_API_HOST = "booking-com.p.rapidapi.com"
 
     @RequiresApi(Build.VERSION_CODES.O)

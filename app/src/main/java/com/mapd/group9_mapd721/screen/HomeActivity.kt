@@ -2,7 +2,6 @@ package com.mapd.group9_mapd721.screen
 
 import android.content.Context
 import android.content.Intent
-import android.location.Geocoder
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -67,7 +66,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.bansidholakiya_mapd721_test.datastore.DataStoreManager
-import com.google.android.gms.location.LocationServices
 import com.mapd.group9_mapd721.R
 import com.mapd.group9_mapd721.api.ApiFunctions.fetchHotels
 import com.mapd.group9_mapd721.api.ApiFunctions.getDestinationId
@@ -96,9 +94,6 @@ fun HomePage(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
 
     var searchText by remember { mutableStateOf("") }
-
-    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-    val geocoder = remember { Geocoder(context, Locale.getDefault()) }
 
     LaunchedEffect(Unit) {
         cName.value = dataStore.readCName()
