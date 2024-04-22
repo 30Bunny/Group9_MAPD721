@@ -6,6 +6,5 @@ Our hotel management Android application is a comprehensive solution tailored to
 
 ### App Images
 <img src="./ss/home.jpeg" width="200">
-![Alt text](ss/home.jpeg "Home")
-![Alt text](ss/hotel_detail.jpeg "Hotel Detail")
-![Alt text](ss/image_gallery.jpeg "Image Gallery")
+<img src="./ss/hotel_detail.jpeg" width="200">
+<img src="./ss/image_gallery.jpeg" width="200">
