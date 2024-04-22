@@ -506,7 +506,7 @@ fun CustomDatePicker(
 fun calculateTotalPrice(rooms: Int, nights: Long, value: Double): Double {
     var newTotalPrice = 0.0
     for (i in 0 until rooms) {
-        val basePrice = if (i == 0) value else 75.0
+        val basePrice = if (i == 0) value else value * 0.75
         newTotalPrice += basePrice * nights
     }
     return newTotalPrice
